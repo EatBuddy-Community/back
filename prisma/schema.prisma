@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL") // 화가 나네요 왜 뜨는지 이유모르겠음 걍 무시하고 하겠습니다..
 }
 
 model User {
@@ -13,18 +14,54 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // 관계 설정
+  bookmarks  Bookmark[]
+  activities Activity[]
+
+  // 내가 방을 만든 매칭 (UserA)
+  matches Match[] @relation("UserAMatches")
 }
 
 model Match {
   id        String      @id @default(uuid())
   userAId   String
-  userBId   String
-  createdAt DateTime    @default(now())
+  userBId   String? // 매칭 대기 중일 때는 null
+  placeId   String // 카카오 맵 place_id
+  placeName String // 가게 이름
   status    MatchStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+
+  // 관계 설정
+  userA User @relation("UserAMatches", fields: [userAId], references: [id])
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  placeId   String // 카카오 place_id
+  placeName String
+  category  String? // 일식, 한식 등
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, placeId]) // 중복 찜 방지
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String // "MATCH_CREATED", "MATCH_SUCCESS", "BOOKMARK_ADDED"
+  content   String // 알림 텍스트
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 enum MatchStatus {
   PENDING
   ACCEPTED
   REJECTED
+  CANCELLED
 }
