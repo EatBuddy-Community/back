@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  //url      = env("DATABASE_URL") // 화가 나네요 왜 뜨는지 이유모르겠음 걍 무시하고 하겠습니다..
+  //url      = env("DATABASE_URL") // 
 }
 
 model User {
