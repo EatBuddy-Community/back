@@ -10,5 +10,10 @@ export class AuthRepository {
       where: { email },
     });
   }
-  
+
+  async createUser(data: any) {
+    return this.prisma.user.create({
+      data,
+    });
+  }
 }
