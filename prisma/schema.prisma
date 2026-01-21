@@ -22,7 +22,8 @@ model User {
   activities Activity[]
 
   // 내가 방을 만든 매칭 (UserA)
-  matches Match[] @relation("UserAMatches")
+  matches  Match[]   @relation("UserAMatches")
+  payments Payment[]
 }
 
 model Match {
@@ -35,7 +36,8 @@ model Match {
   createdAt DateTime    @default(now())
 
   // 관계 설정
-  userA User @relation("UserAMatches", fields: [userAId], references: [id])
+  userA    User      @relation("UserAMatches", fields: [userAId], references: [id])
+  payments Payment[]
 }
 
 model Bookmark {
@@ -66,4 +68,26 @@ enum MatchStatus {
   ACCEPTED
   REJECTED
   CANCELLED
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  matchId     String
+  userId      String
+  amount      Int           @default(5000)
+  status      PaymentStatus @default(READY) // READY, PAID, CANCELLED, REFUNDED
+  impUid      String? // 포트원(아임포트) 등 외부 결제 고유 ID (환불 시 필요)
+  merchantUid String        @unique // 우리 서버가 생성한 주문번호
+  paidAt      DateTime?
+
+  match Match @relation(fields: [matchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+enum PaymentStatus {
+  READY
+  PAID
+  CANCELLED
+  REFUNDED
+  COMPLETED // 식당에서 할인이 완료된 상태
 }
