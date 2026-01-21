@@ -35,6 +35,9 @@ model Match {
   status    MatchStatus @default(PENDING)
   createdAt DateTime    @default(now())
 
+  isNoShow     Boolean @default(false)
+  noShowUserId String? // 노쇼한 유저의 ID 저장
+
   // 관계 설정
   userA    User      @relation("UserAMatches", fields: [userAId], references: [id])
   payments Payment[]
@@ -86,8 +89,8 @@ model Payment {
 
 enum PaymentStatus {
   READY
-  PAID
-  CANCELLED
-  REFUNDED
-  COMPLETED // 식당에서 할인이 완료된 상태
+  PAID // 결제 완료
+  REFUNDED // (매칭 실패 시) 환불 완료
+  COMPLETED // 정상 식사 후 할인 적용 완료
+  COMPENSATED // 노쇼 발생 시 상대방에게 보상금으로 넘어감
 }
