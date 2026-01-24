@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { MatchRepository } from './match.repository';
+import { MatchTransactionManaget } from './match-transaction.manager';
 
 @Injectable()
 export class MatchService {
-  constructor(private readonly matchRepository: MatchRepository) {}
+  constructor(
+    private readonly matchRepository: MatchRepository,
+    private readonly transactionManager: MatchTransactionManaget,
+  ) {}
 
   async joinMatch(userBId: string, matchId: string) {
     // [판단 1] 매칭이 존재하는가?
@@ -17,7 +21,12 @@ export class MatchService {
       throw new BadRequestException('본인이 만든 방에는 참여할 수 없습니다.');
     }
 
-    // [실행] 모든 검증 통과 시 Repository에 업데이트 요청
-    return this.matchRepository.updateStatus(matchId, userBId, 'ACCEPTED');
+    // [실행] 기존 레포지토리 호출 대신 매니저의 트랜잭션 로직 호출!
+    return this.transactionManager.joinMatchWithActivity(
+      userBId,
+      matchId,
+      match.placeName,
+      match.userAId,
+    );
   }
 }
