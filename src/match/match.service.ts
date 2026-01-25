@@ -29,4 +29,30 @@ export class MatchService {
       match.userAId,
     );
   }
+
+  async cancelMatch(userId: string, matchId: string) {
+    // 1. 매칭 존재 여부 확인
+    const match = await this.matchRepository.findById(matchId);
+    if (!match) {
+      throw new BadRequestException('존재하지 않는 매칭입니다.');
+    }
+
+    // 2. 권한 확인: 방장만 취소할 수 있음
+    if (match.userAId !== userId) {
+      throw new BadRequestException('방장만 매칭을 취소할 수 있습니다.');
+    }
+
+    // 3. 이미 완료되거나 취소된 매칭인지 확인
+    if (match.status === 'CANCELLED' || match.status === 'REJECTED') {
+      throw new BadRequestException('이미 취소되었거나 종료된 매칭입니다.');
+    }
+
+    // 4. 트랜잭션 매니저 호출
+    return this.transactionManager.cancelMatchWithActivity(
+      matchId,
+      match.userAId,
+      match.userBId, // 참여자가 없으면 null이 넘어감
+      match.placeName,
+    );
+  }
 }
