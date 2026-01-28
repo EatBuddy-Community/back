@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { EventsGateway } from 'src/event/event.gateway';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class MatchTransactionManaget {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   async joinMatchWithActivity(
     userBId: string,
@@ -11,14 +15,12 @@ export class MatchTransactionManaget {
     placeName: string,
     userAId: string,
   ) {
-    return await this.prisma.$transaction(async (tx) => {
-      // 1. 매칭 상태 업데이트
-      const updatedMatch = await tx.match.update({
+    const updatedMatch = await this.prisma.$transaction(async (tx) => {
+      const match = await tx.match.update({
         where: { id: matchId },
         data: { userBId, status: 'ACCEPTED' },
       });
 
-      // 2. 알림 생성
       await tx.activity.create({
         data: {
           userId: userAId,
@@ -27,8 +29,16 @@ export class MatchTransactionManaget {
         },
       });
 
-      return updatedMatch;
+      return match;
     });
+
+    // 2. 트랜잭션이 '완전히' 성공한 후 알림 전송 (안전!)
+    this.eventsGateway.sendNotification(userAId, {
+      type: 'MATCH_SUCCESS',
+      content: `'${placeName}' 매칭이 성공했습니다! 지금 확인해보세요.`,
+    });
+
+    return updatedMatch;
   }
 
   async cancelMatchWithActivity(
@@ -37,14 +47,13 @@ export class MatchTransactionManaget {
     userBId: string | null,
     placeName: string,
   ) {
-    return await this.prisma.$transaction(async (tx) => {
-      // 1. 매칭 상태를 CANCELLED로 변경
-      const cancelledMatch = await tx.match.update({
+    // 1. DB 작업 완료
+    const cancelledMatch = await this.prisma.$transaction(async (tx) => {
+      const match = await tx.match.update({
         where: { id: matchId },
         data: { status: 'CANCELLED' },
       });
 
-      // 2. 방장 본인에게 취소 확인 알림 기록
       await tx.activity.create({
         data: {
           userId: userAId,
@@ -53,7 +62,6 @@ export class MatchTransactionManaget {
         },
       });
 
-      // 3. 참여자가 있었을 경우, 참여자에게도 취소 알림 전송
       if (userBId) {
         await tx.activity.create({
           data: {
@@ -63,8 +71,17 @@ export class MatchTransactionManaget {
           },
         });
       }
-
-      return cancelledMatch;
+      return match;
     });
+
+    // 2. 트랜잭션 성공 후 알림 전송
+    if (userBId) {
+      this.eventsGateway.sendNotification(userBId, {
+        type: 'MATCH_CANCELLED',
+        content: `참여 중이던 '${placeName}' 매칭이 취소되었습니다.`,
+      });
+    }
+
+    return cancelledMatch;
   }
 }
