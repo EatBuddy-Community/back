@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { MatchService } from './match.service';
 
 @Controller('matches')
@@ -17,4 +17,9 @@ export class MatchController {
   // 매칭 생성: POST /matches
   @Post()
   async createMatch(@Body() createMatchDto: any) {}
+
+  @Get('active-places')
+  async getActivePlaces() {
+    return this.matchService.getActivePlaces();
+  }
 }

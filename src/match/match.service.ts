@@ -55,4 +55,8 @@ export class MatchService {
       match.placeName,
     );
   }
+
+  async getActivePlaces() {
+    return this.matchRepository.findActivePlaceIds();
+  }
 }

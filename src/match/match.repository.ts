@@ -20,4 +20,14 @@ export class MatchRepository {
       data: { userBId, status },
     });
   }
+
+  async findActivePlaceIds() {
+    const activeMatches = await this.prisma.match.findMany({
+      where: { status: 'PENDING' },
+      select: { placeId: true },
+      distinct: ['placeId'], // 중복 제거
+    });
+
+    return activeMatches.map((m) => m.placeId);
+  }
 }
